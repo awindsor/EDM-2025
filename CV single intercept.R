@@ -12,13 +12,13 @@ library(bit64)
 
 all_data<-setDT(val[order(val$CF..Time.),])
 
-all_data[, fold := cut(.I, breaks = 101, labels = 1:101)]
+all_data[, fold := cut(.I, breaks = 100, labels = 1:100)]
 
 
 # Creating the first data frame 'res'
 res <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric())
 
-for (i in 1:20) {
+for (i in 1:40) {
   #print(paste("training folds",(1:i)))
   
   

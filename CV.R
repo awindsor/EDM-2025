@@ -13,13 +13,13 @@ library(bit64)
   all_data<-setDT(val[order(val$CF..Time.),])
   
   
-  all_data[, fold := cut(.I, breaks = 101, labels = 1:101)]
+  all_data[, fold := cut(.I, breaks = 100, labels = 1:100)]
   
   
   # Creating the first data frame 'res'
   res <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric())
   
-  for (i in 1:20) {
+  for (i in 1:40) {
     #print(paste("training folds",(1:i)))
     
     
@@ -30,9 +30,9 @@ library(bit64)
     
     pred <- as.vector(pmin(pmax(inv.logit(
       as.matrix(modelob2$predictors %*% modelob2$coefs)[,]
-    ), .00001), .99999)[modelob2$newdata$fold %in% (i+1)])
+    ), .00001), .99999)[modelob2$newdata$fold %in% (i+1):100])
     #  print(pred)
-    actual<-modelob2$newdata$CF..ansbin.[modelob2$newdata$fold %in% (i+1)]
+    actual<-modelob2$newdata$CF..ansbin.[modelob2$newdata$fold %in% (i+1):100]
     #print(actual)
     res<-rbind(res,c(sqrt(mean((actual-pred)^2)),
                      -mean(actual * log(pred) + (1 - actual) * log(1 - pred)),
