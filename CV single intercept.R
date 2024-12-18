@@ -12,17 +12,17 @@ library(bit64)
 
 all_data<-setDT(val[order(val$CF..Time.),])
 
-all_data[, fold := cut(.I, breaks = 11, labels = 1:11)]
+all_data[, fold := cut(.I, breaks = 101, labels = 1:101)]
 
 
 # Creating the first data frame 'res'
 res <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric())
 
-for (i in 1:10) {
+for (i in 1:20) {
   #print(paste("training folds",(1:i)))
   
   
-  modelob2 <-    LKT(verbose=F,data = all_data, interc=T,dualfit = FALSE,factrv = 1e11,
+  modelob2 <-    LKT(verbose=F,data = all_data, interc=T,dualfit = FALSE,factrv = 1e11,usefolds=(1:i),
                      components = c("Anon.Student.Id","KC..Default.","KC..Default.")
                      ,features = c("logitdec", "logsuc","recency"),fixedpars =c(0.98, 0.24,.99))
   if(i==1){print(modelob2$coefs)}

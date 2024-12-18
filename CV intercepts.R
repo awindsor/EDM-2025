@@ -22,7 +22,7 @@ for (i in 1:10) {
   #print(paste("training folds",(1:i)))
   
   
-  modelob2 <-    LKT(verbose=F,data = all_data, interc=T,dualfit = FALSE,factrv = 1e11,
+  modelob2 <-    LKT(verbose=F,data = all_data, interc=T,dualfit = FALSE,factrv = 1e11,usefolds=(1:i),
                      components = c("Anon.Student.Id","KC..Default.","KC..Default.","KC..Default.")
                      ,features = c("logitdec", "logsuc","recency","intercept"),fixedpars =c(0.98, 0.24,.99))
   if(i==1){print(modelob2$coefs)}
