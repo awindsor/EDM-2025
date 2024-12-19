@@ -13,13 +13,13 @@ library(bit64)
   all_data<-setDT(val[order(val$CF..Time.),])
   
   
-  all_data[, fold := cut(.I, breaks = 100, labels = 1:100)]
+  all_data[, fold := cut(.I, breaks = 11, labels = 1:11)]
   
   
   # Creating the first data frame 'res'
   res <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric())
   
-  for (i in 1:40) {
+  for (i in 1:10) {
     #print(paste("training folds",(1:i)))
     
     
@@ -30,9 +30,9 @@ library(bit64)
     
     pred <- as.vector(pmin(pmax(inv.logit(
       as.matrix(modelob2$predictors %*% modelob2$coefs)[,]
-    ), .00001), .99999)[modelob2$newdata$fold %in% (i+1):100])
+    ), .00001), .99999)[modelob2$newdata$fold %in% (i+1)])
     #  print(pred)
-    actual<-modelob2$newdata$CF..ansbin.[modelob2$newdata$fold %in% (i+1):100]
+    actual<-modelob2$newdata$CF..ansbin.[modelob2$newdata$fold %in% (i+1)]
     #print(actual)
     res<-rbind(res,c(sqrt(mean((actual-pred)^2)),
                      -mean(actual * log(pred) + (1 - actual) * log(1 - pred)),
@@ -44,3 +44,11 @@ library(bit64)
   colnames(res) <- c("RMSE", "LL", "N")
   
   print(res)
+
+  
+  # Create the plot with labeled axes
+  plot(res$LL, type = "o", pch = 16, col = "blue",
+       xlab = "Percentage of Data Used in Training (%)",
+       ylab = "Log Likelihood (LL)",
+       main = "Training Data vs. Log Likelihood")
+  
