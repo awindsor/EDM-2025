@@ -2,7 +2,7 @@ library(data.table); library(readr); library(dplyr); library(LKT); library(boot)
 
 all_data <- setDT(val[order(val$CF..Time.),])
 all_data[, fold := cut(.I, breaks = 100, labels = 1:100)]
-res1 <- res2 <- res3 <-res4 <-res5<-res6 <-res7<-res8 <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric(), AUC = numeric())
+res1 <- res2 <- res3 <-res4 <-res5<-res6 <-res7<-res8<-res9 <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric(), AUC = numeric())
 
 for (i in 1:30) {
   # Model AFM (fixed effects)
@@ -72,60 +72,54 @@ for (i in 1:30) {
                         length(actual8), 
                         as.numeric(roc(actual8, pred8, quiet = TRUE)$auc)))
   
+  modelob9 <- LKT(verbose = FALSE, data = all_data, interc = TRUE, dualfit = FALSE, factrv = 1e11,
+                  usefolds = (1:i), components = c("Anon.Student.Id", "KC..Default.", "KC..Default.", "KC..Default."),
+                  features = c("logitdec", "logitdecevol", "logsuc","recency"), fixedpars = c(.98,.98,.25))
+  pred9 <- pmin(pmax(inv.logit(as.matrix(modelob9$predictors %*% modelob9$coefs)[, ]), 1e-5), 0.99999)[modelob9$newdata$fold %in% (i+1):min(100, i+70)]
+  actual9 <- modelob9$newdata$CF..ansbin.[modelob9$newdata$fold %in% (i+1):min(100, i+70)]
+  res9 <- rbind(res9, c(sqrt(mean((actual9 - pred9)^2)),
+                        -mean(actual9 * log(pred9) + (1 - actual9) * log(1 - pred9)),
+                        length(actual9),
+                        as.numeric(roc(actual9, pred9, quiet = TRUE)$auc)))
 }
-
-# Add Model 8 to column names
-colnames(res1) <- colnames(res2) <- colnames(res3) <- colnames(res4) <- colnames(res5) <- colnames(res6) <- colnames(res7) <- colnames(res8) <- c("RMSE", "LL", "N", "AUC")
+# Add Model 9 to column names
+colnames(res1) <- colnames(res2) <- colnames(res3) <- colnames(res4) <- colnames(res5) <- colnames(res6) <- colnames(res7) <- colnames(res8) <- colnames(res9) <- c("RMSE", "LL", "N", "AUC")
 
 # Dynamically calculate y-limits for RMSE
-rmse_ylim <- range(c(res1$RMSE, res2$RMSE, res3$RMSE, res4$RMSE, res5$RMSE, res6$RMSE, res7$RMSE, res8$RMSE))
+rmse_ylim <- range(c(res1$RMSE, res2$RMSE, res3$RMSE, res4$RMSE, res5$RMSE, res6$RMSE, res7$RMSE, res8$RMSE, res9$RMSE))
+
+# Manually sorted models as a list
+models <- list(
+  list(name = "Model 1: fixed effects", res = res1, color = "blue"),
+  list(name = "Model 3: int + logitdecevol + lineafm$", res = res3, color = "darkgreen"),
+  list(name = "Model 8: int + logitdecevol + lineafm", res = res8, color = "cyan"),
+  list(name = "Model 2: logitdec + int + lineafm$", res = res2, color = "red"),
+  list(name = "Model 7: logitdec + int + lineafm1", res = res7, color = "pink"),
+  list(name = "Model 4: logitdec + logitdecevol + lineafm$", res = res4, color = "purple"),
+  list(name = "Model 5: logitdec + logitdecevol + lineafm1", res = res5, color = "orange"),
+  list(name = "Model 6: logitdec + logitdecevol + logsuc1", res = res6, color = "brown"),
+  list(name = "Model 9: logitdec + logitdecevol + logsuc1 + recency", res = res9, color = "black")
+)
 
 # RMSE Plot
 par(mar = c(5, 4, 2, 2))
-plot(res1$RMSE, type = "o", pch = 16, col = "blue", ylim = rmse_ylim,
+plot(models[[1]]$res$RMSE, type = "o", pch = 16, col = models[[1]]$color, ylim = rmse_ylim,
      xlab = "Percentage of Data Used in Training (%)", ylab = "RMSE")
-lines(res2$RMSE, type = "o", pch = 16, col = "red")
-lines(res3$RMSE, type = "o", pch = 16, col = "darkgreen")
-lines(res4$RMSE, type = "o", pch = 16, col = "purple")
-lines(res5$RMSE, type = "o", pch = 16, col = "orange")
-lines(res6$RMSE, type = "o", pch = 16, col = "brown")
-lines(res7$RMSE, type = "o", pch = 16, col = "pink")
-lines(res8$RMSE, type = "o", pch = 16, col = "cyan")
-legend("topright", 
-       legend = c("Model 1: fixed effects",
-                  "Model 2: logitdec + int + lineafm$",
-                  "Model 3: int + logitdecevol + lineafm$",
-                  "Model 4: logitdec + logitdecevol + lineafm$",
-                  "Model 5: logitdec + logitdecevol + lineafm1",
-                  "Model 6: logitdec + logitdecevol + logsuc1",
-                  "Model 7: logitdec + int + lineafm1",
-                  "Model 8: int + logitdecevol + lineafm"),
-       col = c("blue", "red", "darkgreen", "purple", "orange", "brown", "pink", "cyan"),
-       pch = 16, lty = 1)
+for (i in 2:length(models)) {
+  lines(models[[i]]$res$RMSE, type = "o", pch = 16, col = models[[i]]$color)
+}
+legend("topright", legend = sapply(models, function(m) m$name), col = sapply(models, function(m) m$color), pch = 16, lty = 1)
 
 # Dynamically calculate y-limits for AUC
-auc_ylim <- range(c(res1$AUC, res2$AUC, res3$AUC, res4$AUC, res5$AUC, res6$AUC, res7$AUC, res8$AUC))
+auc_ylim <- range(c(res1$AUC, res2$AUC, res3$AUC, res4$AUC, res5$AUC, res6$AUC, res7$AUC, res8$AUC, res9$AUC))
 
 # AUC Plot
 par(mar = c(5, 4, 2, 2))
-plot(res1$AUC, type = "o", pch = 16, col = "blue", ylim = auc_ylim,
+plot(models[[1]]$res$AUC, type = "o", pch = 16, col = models[[1]]$color, ylim = auc_ylim,
      xlab = "Percentage of Data Used in Training (%)", ylab = "AUC")
-lines(res2$AUC, type = "o", pch = 16, col = "red")
-lines(res3$AUC, type = "o", pch = 16, col = "darkgreen")
-lines(res4$AUC, type = "o", pch = 16, col = "purple")
-lines(res5$AUC, type = "o", pch = 16, col = "orange")
-lines(res6$AUC, type = "o", pch = 16, col = "brown")
-lines(res7$AUC, type = "o", pch = 16, col = "pink")
-lines(res8$AUC, type = "o", pch = 16, col = "cyan")
-legend("bottomright", 
-       legend = c("Model 1: fixed effects",
-                  "Model 2: logitdec + int + lineafm$",
-                  "Model 3: int + logitdecevol + lineafm$",
-                  "Model 4: logitdec + logitdecevol + lineafm$",
-                  "Model 5: logitdec + logitdecevol + lineafm1",
-                  "Model 6: logitdec + logitdecevol + logsuc1",
-                  "Model 7: logitdec + int + lineafm1",
-                  "Model 8: int + logitdecevol + lineafm"),
-       col = c("blue", "red", "darkgreen", "purple", "orange", "brown", "pink", "cyan"),
-       pch = 16, lty = 1)
+for (i in 2:length(models)) {
+  lines(models[[i]]$res$AUC, type = "o", pch = 16, col = models[[i]]$color)
+}
+legend("bottomright", legend = sapply(models, function(m) m$name), col = sapply(models, function(m) m$color), pch = 16, lty = 1)
+
 
