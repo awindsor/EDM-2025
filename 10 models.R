@@ -3,8 +3,8 @@ library(data.table); library(readr); library(dplyr); library(LKT); library(boot)
 all_data <- setDT(val[order(val$CF..Time.),])
 all_data[, fold := cut(.I, breaks = 100, labels = 1:100)]
 res1 <- res2 <- res3 <-res4 <-res5<-res6 <-res7<-res8<-res9 <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric(), AUC = numeric())
-
-for (i in 1:30) {
+train_pcts = 30
+for (i in 1:train_pcts) {
   print(i)
   # Model AFM (fixed effects)
   modelob1 <- LKT(verbose = FALSE, data = all_data, interc = TRUE, dualfit = FALSE, factrv = 1e11, 
@@ -87,7 +87,7 @@ for (i in 1:30) {
 #Compute Elo
 #This code finds K in training % of the data using the fold ID, then runs on rest with that K
 #Test RMSE is only from folds after K is chosen
-train_pcts = 30
+
 auc_test = rep(NA,train_pcts)
 rmse_test = rep(NA,train_pcts)
 K_options = c(.001,.1,.5,seq(1,100,1)) #Somewhat arbitrary range of choices, but about 10 seems usually good

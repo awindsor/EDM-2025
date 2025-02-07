@@ -75,7 +75,7 @@ colnames(val2)[colnames(val2) == "KC..MATHia."] <- "KC..Default."
 val2 <- suppressWarnings(computeSpacingPredictors(val2, "KC..Default.")) #allows recency, spacing, forgetting features to run
 val2 <- suppressWarnings(computeSpacingPredictors(val2, "Problem.Name")) #allows recency, spacing, forgetting features to run
 val2 <- suppressWarnings(computeSpacingPredictors(val2, "Anon.Student.Id")) #allows recency, spacing, forgetting features to run
-val<-val2
+
 
 
 
@@ -83,68 +83,34 @@ val<-val2
 # Load interleaving and blocking (Patel) (example how to load a remote dataset)
 set.seed(41)
 datafile<-"C:/Users/ppavl/OneDrive/Active projects/ds1706_tx_All_Data_3416_2017_0623_020504.txt" # CHANGE THIS VALUE TO THE DataShop export file IN YOUR R WORKING DIRECTORY
-val2<-read.delim(colClasses = c("Anon.Student.Id"="character"),datafile,sep="\t", header=TRUE,quote="")
-val2=as.data.table(val2)
-val2$CF..Time.<-as.numeric(as.POSIXct(as.character(val2$Time),format="%Y-%m-%d %H:%M:%S"))
+val3<-read.delim(colClasses = c("Anon.Student.Id"="character"),datafile,sep="\t", header=TRUE,quote="")
+val3=as.data.table(val3)
+val3$CF..Time.<-as.numeric(as.POSIXct(as.character(val3$Time),format="%Y-%m-%d %H:%M:%S"))
 
 #make sure it is ordered in the way the code expects
-val2<-val2[order(val2$Anon.Student.Id, val2$CF..Time.),]
+val3<-val3[order(val3$Anon.Student.Id, val3$CF..Time.),]
 
 #create a binary response column to predict and extract only data with a valid value
 
-#val2$Outcome<-ifelse(tolower(val2$Outcome)=="ok","CORRECT","INCORRECT")
-val2$CF..ansbin.<-ifelse(tolower(val2$Outcome)=="correct",1,0)
-val2<-val2[val2$CF..ansbin.==0 | val2$CF..ansbin.==1,]
+#val3$Outcome<-ifelse(tolower(val3$Outcome)=="ok","CORRECT","INCORRECT")
+val3$CF..ansbin.<-ifelse(tolower(val3$Outcome)=="correct",1,0)
+val3<-val3[val3$CF..ansbin.==0 | val3$CF..ansbin.==1,]
 
-#subtot<-  aggregate(val2$CF..ansbin.,by=list(val2$Anon.Student.Id),FUN=length)
+#subtot<-  aggregate(val3$CF..ansbin.,by=list(val3$Anon.Student.Id),FUN=length)
 # subtot<- subtot[subtot$x<20,]
-# val2<-val2[!(val2$Anon.Student.Id %in% subtot$Group.1),]
-val2<-val2[val2$Attempt.At.Step==1,]
-val2<-val2[val2$KC..Field.!="",]
+# val3<-val3[!(val3$Anon.Student.Id %in% subtot$Group.1),]
+val3<-val3[val3$Attempt.At.Step==1,]
+val3<-val3[val3$KC..Field.!="",]
 # make student stratified folds (for crossvalidation for unseen population)
-unq = sample(unique(val2$Anon.Student.Id))
+unq = sample(unique(val3$Anon.Student.Id))
 sfold = rep(1:5,length.out=length(unq))
-val2$fold = rep(0,length(val2[,1]))
-for(i in 1:5){val2$fold[which(val2$Anon.Student.Id %in% unq[which(sfold==i)])]=i}
+val3$fold = rep(0,length(val3[,1]))
+for(i in 1:5){val3$fold[which(val3$Anon.Student.Id %in% unq[which(sfold==i)])]=i}
 
-colnames(val2)[colnames(val2) == "KC..Field."] <- "KC..Default."
-val2 <- suppressWarnings(computeSpacingPredictors(val2, "KC..Default.")) #allows recency, spacing, forgetting features to run
-val2 <- suppressWarnings(computeSpacingPredictors(val2, "Anon.Student.Id")) #allows recency, spacing, forgetting features to run
-val<-val2
-
-
-val<-val[order(val$CF..Time.),]
-modelob <- LKT(data = setDT(val), interc=TRUE,dualfit = FALSE,factrv = 1e11,
-               components = c("Anon.Student.Id","KC..Default.","KC..Default.","KC..Default.")
-               ,features = c("logitdec", "logsuc","recency","logitdecevol"),fixedpars =c(0.98, 0.24,.99))
-modelob$coefs
-
-modelob <- LKT(data = setDT(val), interc=TRUE,dualfit = FALSE,factrv = 1e11,
-               components = c("Anon.Student.Id","KC..Default.","KC..Default.","KC..Default.")
-               ,features = c("logitdec", "logsuc","recency","intercept"),fixedpars =c(0.98, 0.24,.99))
-
-
-modelob <- LKT(data = setDT(val), interc=TRUE,dualfit = FALSE,factrv = 1e11,
-               components = c("Anon.Student.Id","KC..Default.","KC..Default.")
-               ,features = c("logitdec", "logsuc","recency"),fixedpars =c(0.98, 0.24,.99))
-modelob$coefs
+colnames(val3)[colnames(val3) == "KC..Field."] <- "KC..Default."
+val3 <- suppressWarnings(computeSpacingPredictors(val3, "KC..Default.")) #allows recency, spacing, forgetting features to run
+val3 <- suppressWarnings(computeSpacingPredictors(val3, "Anon.Student.Id")) #allows recency, spacing, forgetting features to run
 
 
 
-
-val<-val2[order(val2$CF..Time.),]
-modelob <- LKT(data = setDT(val), interc=TRUE,dualfit = FALSE,factrv = 1e11,
-               components = c("Anon.Student.Id","KC..MATHia.","KC..MATHia.","KC..MATHia.")
-               ,features = c("logitdec", "logsuc","recency","logitdecevol"),fixedpars =c(0.98, 0.24,.99))
-modelob$coefs
-
-modelob <- LKT(data = setDT(val), interc=TRUE,dualfit = FALSE,factrv = 1e11,
-               components = c("Anon.Student.Id","KC..MATHia.","KC..MATHia.","KC..MATHia.")
-               ,features = c("logitdec", "logsuc","recency","intercept"),fixedpars =c(0.98, 0.24,.99))
-
-
-modelob <- LKT(data = setDT(val), interc=TRUE,dualfit = FALSE,factrv = 1e11,
-               components = c("Anon.Student.Id","KC..MATHia.","KC..MATHia.")
-               ,features = c("logitdec", "logsuc","recency"),fixedpars =c(0.98, 0.24,.99))
-modelob$coefs
 
