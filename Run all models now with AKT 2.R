@@ -1,4 +1,9 @@
-##AKT not working in this version, comment out to run and produce plot from paper
+##
+## Comprehensive modeling pipeline used in the paper.  The script trains
+## a variety of student models (AFM variants, LKT, Elo, BKT and AKT) on
+## three prepared datasets.  Results are written to CSV and summary plots
+## are generated at the end.
+## AKT integration requires the Python code in the specified directory.
 
 library(data.table);  library(LKT); library(boot); library(bit64); library(pROC); library(elo)
 library(jsonlite)
@@ -7,6 +12,9 @@ val$KC..Unique.step.<-val$KC..Default.
 val2$KC..Unique.step.<-val2$Problem.Name
 
 
+# Helper to train the AKT deep learning model via the accompanying
+# Python script.  It writes the training/test splits to disk,
+# invokes Python and then reads back the resulting predictions.
 run_akt_simple <- function(train_df, test_df, akt_root, epochs = 1) {
   # 1) Define unified factor levels
   uid_lvls <- unique(c(train_df$Anon.Student.Id, test_df$Anon.Student.Id))
@@ -153,17 +161,20 @@ datasets <- list(  val,val2,val3)
 results_list <- list()
 
 # Loop over each dataset
+# Iterate over the three datasets.  Each dataset is split into 100
+# temporal folds and models are trained on an expanding window of data.
 for (dataset_index in 1:3) {
-  
-  
+
+
   all_data <- setDT(datasets[[dataset_index]][order(datasets[[dataset_index]]$CF..Time.),])
   all_data[, fold := cut(.I, breaks = 100, labels = 1:100)]
   res1 <- res2 <- res3 <-res4 <-res5<-res6 <-res7<-res8<-res9<-res10 <-resAKT<- data.frame(RMSE = numeric(), LL = numeric(), N = numeric(), AUC = numeric())
   train_pcts = 30
   
   for (i in (1:train_pcts)) {
+    # i controls the size of the training window (1%..30% of data)
     print(i)
-    # BKT section
+    # ----- BKT section via external C++ code -----
     # Prepare training and testing data
     train_indices <- which(all_data$fold %in% (1:i))
     test_indices <- which(all_data$fold %in% ((i + 1):min(100, i + 70)))
@@ -178,7 +189,7 @@ for (dataset_index in 1:3) {
     predictions <- model10_results[[1]]
     actual <- model10_results[[2]]
     
-    # Calculate performance metrics
+    # Calculate performance metrics for BKT
     rmse <- sqrt(mean((actual - predictions)^2))
     log_loss <- -mean(actual * log(predictions) + (1 - actual) * log(1 - predictions))
     n <- length(actual)
@@ -242,8 +253,7 @@ for (dataset_index in 1:3) {
                           as.numeric(roc(actual9, pred9, quiet = TRUE)$auc)))
     
     # --- AKT Integration via run_akt_simple() ---
-  
-    # call new wrapper with separate train / test
+    # Invoke the Python-based AKT model using the current train/test split
     akt_payload <- run_akt_simple(
       train_df = traindata,
       test_df  = testdata,
@@ -251,7 +261,7 @@ for (dataset_index in 1:3) {
       epochs   = 60
     )
     
-    # extract and compute metrics
+    # Extract AKT predictions and compute evaluation metrics
     truth    <- akt_payload$test_true
     preds    <- akt_payload$test_pred
     rmse     <- sqrt(mean((truth - preds)^2))
@@ -274,9 +284,9 @@ for (dataset_index in 1:3) {
     
   }
   
-  #Compute Elo
-  #This code finds K in training % of the data using the fold ID, then runs on rest with that K
-  #Test RMSE is only from folds after K is chosen
+  # ----- Elo rating model -----
+  # Here we tune the K parameter on the training folds and then
+  # evaluate the model on the remaining data.
   
   auc_test = rep(NA,train_pcts)
   rmse_test = rep(NA,train_pcts)
@@ -407,7 +417,9 @@ plot_model_performance <- function(dataset_index) {
   plot_model_performance(dataset_index = 2)
   plot_model_performance(dataset_index = 3)
   
-  plot_model_performance_tiled <- function(dataset_indexes = 1:3, exclude_files = character(0), 
+  # Create tiled plots of RMSE/AUC across datasets.  Results for each model
+  # are read from the per-dataset CSV files written earlier.
+  plot_model_performance_tiled <- function(dataset_indexes = 1:3, exclude_files = character(0),
                                            rmse_output_file = "RMSE_all_datasets_tiled.png", 
                                            auc_output_file = "AUC_all_datasets_tiled.png") {
     library(data.table)

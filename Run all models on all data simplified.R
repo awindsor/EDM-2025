@@ -1,4 +1,6 @@
-# Early version, produces same results as other Run all, without joined plot ans AKT
+# Simplified modelling script used for early experiments.  It trains
+# AFM/LKT variants, Elo and BKT on each dataset but does not include
+# AKT or the final plotting routine found in the main script.
 
 library(data.table); library(readr); library(dplyr); library(LKT); library(boot); library(bit64); library(pROC); library(elo)
 
@@ -8,6 +10,9 @@ library(data.table); library(readr); library(dplyr); library(LKT); library(boot)
 # Define training arguments
 trainingargs <- "-s 1.3.1 -m 1 -p 1 -e 0.0000001 -i 1000"
 
+# Wrapper around the C++ BKT implementation distributed with hmm-scalable.
+# It writes the train/test sets to temporary files and returns the predicted
+# probabilities for the test portion.
 train_and_predict <- function(traindata, testdata, trainingargs) {
   traindata <- traindata[, .(
     observation = ifelse(CF..ansbin. == 1, 1L, 2L),     # 1 for correct, 2 for incorrect
@@ -80,6 +85,8 @@ datasets <- list(  val,val2,val3)
 results_list <- list()
 
 # Loop over each dataset
+# Iterate through the three prepared datasets.  Each dataset is ordered
+# by timestamp and divided into 100 folds for an expanding-window evaluation.
 for (dataset_index in 1:3) {
 
 
@@ -88,6 +95,8 @@ all_data[, fold := cut(.I, breaks = 100, labels = 1:100)]
 res1 <- res2 <- res3 <-res4 <-res5<-res6 <-res7<-res8<-res9<-res10 <- data.frame(RMSE = numeric(), LL = numeric(), N = numeric(), AUC = numeric())
 train_pcts = 30
 
+# Loop over increasing percentages of the data (1% .. 30%) to build
+# a learning curve.
 for (i in 1:train_pcts) {
   print(i)
   
@@ -176,9 +185,9 @@ for (i in 1:train_pcts) {
   
 }
 
-#Compute Elo
-#This code finds K in training % of the data using the fold ID, then runs on rest with that K
-#Test RMSE is only from folds after K is chosen
+# ----- Elo rating model -----
+# Tune the K parameter on the training folds and then evaluate on the
+# next 70% of the data.  Test RMSE is only computed after K is chosen.
 
 auc_test = rep(NA,train_pcts)
 rmse_test = rep(NA,train_pcts)

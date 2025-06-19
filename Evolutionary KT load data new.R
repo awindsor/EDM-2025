@@ -1,7 +1,14 @@
 
+# This script demonstrates how to preprocess three different DataShop
+# exports and compute spacing predictors for use with the LKT package.
+# It prepares three datasets:
+#   * val  - Cloze style fill‑in‑the‑blank data
+#   * val2 - MATHia export
+#   * val3 - Interleaving/Blocking dataset
+
 library(LKT)
-set.seed(41)
-val<-largerawsample
+set.seed(41)                           # keep results reproducible
+val <- largerawsample                  # example cloze dataset already loaded
 
 #clean it up
 val$KC..Default.<-val$Problem.Name
@@ -23,21 +30,25 @@ val<-val[val$CF..ansbin.==0 | val$CF..ansbin.==1,]
 # create durations
 val$Duration..sec.<-(val$CF..End.Latency.+val$CF..Review.Latency.+500)/1000
 
-# this function needs times and durations but you don't need it if you don't want to model time effects
-val <- computeSpacingPredictors(val, "KC..Default.") #allows recency, spacing, forgetting features to run
-val <- computeSpacingPredictors(val, "KC..Cluster.") #allows recency, spacing, forgetting features to run
-val <- computeSpacingPredictors(val, "Anon.Student.Id") #allows recency, spacing, forgetting features to run
-val <- computeSpacingPredictors(val, "CF..Correct.Answer.") #allows recency, spacing, forgetting features to run
+# The computeSpacingPredictors() helper will generate recency, spacing
+# and forgetting features used by several LKT models.  It requires the
+# timestamps and optional trial durations computed above.
+val <- computeSpacingPredictors(val, "KC..Default.")      # by knowledge component
+val <- computeSpacingPredictors(val, "KC..Cluster.")      # by text cluster
+val <- computeSpacingPredictors(val, "Anon.Student.Id")   # by student
+val <- computeSpacingPredictors(val, "CF..Correct.Answer.") # by answer
 
 
 
 
 
 
-# Load MATHia (example how to load a remote dataset)
+# ---- Load and clean the MATHia export ----
+# Replace the path below with the DataShop file on your machine
 set.seed(41)
-datafile<-"C:/Users/ppavl/OneDrive/Active projects/ds4845_tx_All_Data_6977_2021_0723_141809.txt" # CHANGE THIS VALUE TO THE DataShop export file IN YOUR R WORKING DIRECTORY
-val2<-read.delim(colClasses = c("Anon.Student.Id"="character"),datafile,sep="\t", header=TRUE,quote="")
+datafile <- "C:/Users/ppavl/OneDrive/Active projects/ds4845_tx_All_Data_6977_2021_0723_141809.txt"
+val2 <- read.delim(colClasses = c("Anon.Student.Id"="character"),
+                   datafile, sep="\t", header=TRUE, quote="")
 val2=as.data.table(val2)
 val2$CF..Time.<-as.numeric(as.POSIXct(as.character(val2$Time),format="%Y-%m-%d %H:%M:%S"))
 
@@ -57,18 +68,21 @@ val2<-val2[val2$Attempt.At.Step==1,]
 val2<-val2[val2$KC..MATHia.!="",]
 
 colnames(val2)[colnames(val2) == "KC..MATHia."] <- "KC..Default."
-val2 <- suppressWarnings(computeSpacingPredictors(val2, "KC..Default.")) #allows recency, spacing, forgetting features to run
-val2 <- suppressWarnings(computeSpacingPredictors(val2, "Problem.Name")) #allows recency, spacing, forgetting features to run
-val2 <- suppressWarnings(computeSpacingPredictors(val2, "Anon.Student.Id")) #allows recency, spacing, forgetting features to run
+# Generate the same time‑based features for different grouping factors
+val2 <- suppressWarnings(computeSpacingPredictors(val2, "KC..Default."))  # by KC
+val2 <- suppressWarnings(computeSpacingPredictors(val2, "Problem.Name"))   # by problem name
+val2 <- suppressWarnings(computeSpacingPredictors(val2, "Anon.Student.Id")) # by student
 
 
 
 
 
-# Load interleaving and blocking (Patel) (example how to load a remote dataset)
+# ---- Load the interleaving/blocking dataset ----
+# Again replace the path with the location of the DataShop export
 set.seed(41)
-datafile<-"C:/Users/ppavl/OneDrive/Active projects/ds1706_tx_All_Data_3416_2017_0623_020504.txt" # CHANGE THIS VALUE TO THE DataShop export file IN YOUR R WORKING DIRECTORY
-val3<-read.delim(colClasses = c("Anon.Student.Id"="character"),datafile,sep="\t", header=TRUE,quote="")
+datafile <- "C:/Users/ppavl/OneDrive/Active projects/ds1706_tx_All_Data_3416_2017_0623_020504.txt"
+val3 <- read.delim(colClasses = c("Anon.Student.Id"="character"),
+                   datafile, sep="\t", header=TRUE, quote="")
 val3=as.data.table(val3)
 val3$CF..Time.<-as.numeric(as.POSIXct(as.character(val3$Time),format="%Y-%m-%d %H:%M:%S"))
 
@@ -89,8 +103,8 @@ val3<-val3[val3$KC..Field.!="",]
 # make student stratified folds (for crossvalidation for unseen population)
 
 colnames(val3)[colnames(val3) == "KC..Field."] <- "KC..Default."
-val3 <- suppressWarnings(computeSpacingPredictors(val3, "KC..Default.")) #allows recency, spacing, forgetting features to run
-val3 <- suppressWarnings(computeSpacingPredictors(val3, "Anon.Student.Id")) #allows recency, spacing, forgetting features to run
+val3 <- suppressWarnings(computeSpacingPredictors(val3, "KC..Default."))  # by KC field
+val3 <- suppressWarnings(computeSpacingPredictors(val3, "Anon.Student.Id")) # by student
 
 
 
