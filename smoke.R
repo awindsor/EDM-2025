@@ -1,6 +1,12 @@
+## Minimal demonstration of the AKT wrapper used in the paper.
+## It shows how to call the Python implementation from R and
+## inspect the resulting metrics.
+
 library(data.table)
 library(jsonlite)
 
+# Helper that formats the data, invokes the Python AKT trainer
+# and reads back the resulting metrics.
 run_akt_simple <- function(train_df, test_df, akt_root, epochs = 1) {
   # 1) Define unified factor levels
   uid_lvls <- unique(c(train_df$Anon.Student.Id, test_df$Anon.Student.Id))
@@ -68,7 +74,9 @@ run_akt_simple <- function(train_df, test_df, akt_root, epochs = 1) {
   ))
 }
 
-# Example usage:
+# Example usage of the wrapper.  The blocks below train AKT on
+# each dataset with different training set sizes and print the
+# resulting AUC metrics.
 akt_root <- "C:/Users/ppavl/OneDrive - The University of Memphis/AKT"
 
 # Running the AKT model for the first dataset (val)
